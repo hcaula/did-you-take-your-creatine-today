@@ -1,0 +1,19 @@
+{
+  "name": "Did You Take Your Creatine Today?",
+  "short_name": "Creatine",
+  "description": "Track your daily creatine dosage, streaks, and history.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0b1020",
+  "theme_color": "#7c3aed",
+  "icons": [
+    {
+      "src": "/creatine.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
+
+

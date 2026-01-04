@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Creatine">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#7c3aed"/>
+      <stop offset="1" stop-color="#22c55e"/>
+    </linearGradient>
+  </defs>
+  <rect x="32" y="32" width="448" height="448" rx="112" fill="url(#g)"/>
+  <path fill="rgba(255,255,255,0.95)" d="M242 124c-55 0-100 45-100 100 0 36 19 67 47 84v66c0 19 16 34 35 34h64c19 0 35-15 35-34v-66c28-17 47-48 47-84 0-55-45-100-100-100zm58 242H212v-40h88v40zm0-72H212v-24c0-14-8-26-20-32-20-10-34-31-34-54 0-35 29-64 64-64s64 29 64 64c0 23-14 44-34 54-12 6-20 18-20 32v24z"/>
+</svg>
+
