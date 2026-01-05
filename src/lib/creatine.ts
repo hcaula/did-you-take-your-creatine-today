@@ -179,17 +179,28 @@ export function isTaken(save: SaveDataV2, key: ISODate) {
 }
 
 export function computeCurrentStreak(save: SaveDataV2, today: ISODate): StreakInfo {
-  if (!isTaken(save, today)) return { length: 0, start: null, end: null }
+  // "Current streak" is the most recent consecutive run up to today.
+  // If today isn't taken yet, we allow the streak to end yesterday (so users don't lose the
+  // streak during the day). It only drops to 0 once there's a full-day gap.
+  const todayTaken = isTaken(save, today)
+  const startCursor = todayTaken
+    ? makeLocalNoonDateFromISO(today)
+    : addDaysLocalNoon(makeLocalNoonDateFromISO(today), -1)
+
+  const startKey = toISODateKeyLocal(startCursor)
+  if (!isTaken(save, startKey)) return { length: 0, start: null, end: null }
+
   let len = 0
-  let cursor = makeLocalNoonDateFromISO(today)
+  let cursor = startCursor
   while (true) {
     const key = toISODateKeyLocal(cursor)
     if (!isTaken(save, key)) break
     len += 1
     cursor = addDaysLocalNoon(cursor, -1)
   }
-  const startKey = toISODateKeyLocal(addDaysLocalNoon(cursor, 1))
-  return { length: len, start: startKey, end: today }
+  const runStartKey = toISODateKeyLocal(addDaysLocalNoon(cursor, 1))
+  const runEndKey = toISODateKeyLocal(startCursor)
+  return { length: len, start: runStartKey, end: runEndKey }
 }
 
 export function computeBestStreak(save: SaveDataV2, start: ISODate, end: ISODate): StreakInfo {
