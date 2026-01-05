@@ -54,6 +54,10 @@ function App() {
   const today = getTodayKey();
   const todayTaken = isTaken(save, today);
   const todayTakenAt = todayTaken ? save.taken[today] : undefined;
+  const currentMonthKey = `${new Date().getFullYear()}-${String(
+    new Date().getMonth() + 1
+  ).padStart(2, "0")}`;
+  const [monthFilter, setMonthFilter] = useState<string>(currentMonthKey);
 
   useEffect(() => {
     saveToStorage(save);
@@ -74,6 +78,60 @@ function App() {
   const historyKeys = useMemo(() => {
     return buildHistoryKeysInclusive(startDate, today);
   }, [startDate, today]);
+
+  const monthOptions = useMemo(() => {
+    const fmt = new Intl.DateTimeFormat(undefined, {
+      month: "short",
+      year: "numeric",
+    });
+    const startD = makeLocalNoonDateFromISO(startDate);
+    const endD = makeLocalNoonDateFromISO(today);
+    const startMonth = new Date(
+      startD.getFullYear(),
+      startD.getMonth(),
+      1,
+      12,
+      0,
+      0,
+      0
+    );
+    const endMonth = new Date(
+      endD.getFullYear(),
+      endD.getMonth(),
+      1,
+      12,
+      0,
+      0,
+      0
+    );
+
+    const opts: Array<{ value: string; label: string }> = [
+      { value: "all", label: "All" },
+    ];
+
+    // Most recent -> least recent
+    const cursor = new Date(endMonth);
+    while (cursor >= startMonth) {
+      const value = `${cursor.getFullYear()}-${String(
+        cursor.getMonth() + 1
+      ).padStart(2, "0")}`;
+      opts.push({ value, label: fmt.format(cursor) });
+      cursor.setMonth(cursor.getMonth() - 1, 1);
+    }
+    return opts;
+  }, [startDate, today]);
+
+  useEffect(() => {
+    // Keep default selection as current month when possible.
+    if (monthFilter === "all") return;
+    if (monthOptions.some((o) => o.value === monthFilter)) return;
+    setMonthFilter(currentMonthKey);
+  }, [monthFilter, monthOptions, currentMonthKey]);
+
+  const filteredHistoryKeys = useMemo(() => {
+    if (monthFilter === "all") return historyKeys;
+    return historyKeys.filter((k) => k.slice(0, 7) === monthFilter);
+  }, [historyKeys, monthFilter]);
 
   const currentStreak = useMemo(
     () => computeCurrentStreak(save, today),
@@ -316,14 +374,29 @@ function App() {
 
         <section className="card historyCard" aria-label="History">
           <div className="historyHeader">
-            <h2 className="h2">History</h2>
+            <div className="historyHeaderTop">
+              <h2 className="h2">History</h2>
+              <select
+                id="month-filter"
+                className="selectInput"
+                value={monthFilter}
+                onChange={(e) => setMonthFilter(e.target.value)}
+                aria-label="Filter history by month"
+              >
+                {monthOptions.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
             <div className="historyNote">
               From your first tracked day to today · Most recent first
             </div>
           </div>
 
           <ul className="historyList">
-            {historyKeys.map((key) => {
+            {filteredHistoryKeys.map((key) => {
               const d = makeLocalNoonDateFromISO(key);
               const label = formatHumanDate(d);
               const checked = isTaken(save, key);
