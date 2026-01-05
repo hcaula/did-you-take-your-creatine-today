@@ -479,8 +479,13 @@ function App() {
             <span>Data stays on your device.</span>
             <span className="footerSep">·</span>
             <span>
-              Pro tip: “Add to Home Screen” for an app-like experience.
+              Pro tip: "Add to Home Screen" for an app-like experience.
             </span>
+          </div>
+          <div className="footerDisclaimer">
+            This app is a personal tracking tool only and does not provide
+            medical advice. Consult a healthcare professional before starting
+            any supplement.
           </div>
         </footer>
       </main>

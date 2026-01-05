@@ -74,3 +74,7 @@ Tip: this makes it easy to move data between devices.
 - `src/App.tsx`: UI + app behavior
 - `src/lib/creatine.ts`: date utilities, storage coercion/migration, streak logic
 - `public/manifest.webmanifest`, `public/sw.js`: PWA basics
+
+## Disclaimer
+
+This app is a personal tracking tool only. It does not provide medical advice, diagnosis, or treatment recommendations. The developer is not a medical professional. Always consult a qualified healthcare professional before starting any supplement regimen.

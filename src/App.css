@@ -426,6 +426,18 @@
   opacity: 0.6;
 }
 
+.footerDisclaimer {
+  margin-top: 12px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.5;
+  text-align: center;
+}
+
 .toast {
   position: fixed;
   left: 50%;
