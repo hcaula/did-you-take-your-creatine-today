@@ -9,16 +9,18 @@ import {
   computeCurrentStreak,
   ensureStartDate,
   formatHumanDate,
+  formatHumanTime,
   getTodayKey,
+  isTaken,
   makeDefaultSave,
   makeLocalNoonDateFromISO,
   saveToStorage,
   type ISODate,
-  type SaveDataV1,
+  type SaveData,
 } from "./lib/creatine";
 
 function App() {
-  const [save, setSave] = useState<SaveDataV1>(() => {
+  const [save, setSave] = useState<SaveData>(() => {
     // Lazily load to avoid blocking initial paint more than needed.
     return (() => {
       try {
@@ -50,7 +52,8 @@ function App() {
   const importInputRef = useRef<HTMLInputElement | null>(null);
 
   const today = getTodayKey();
-  const todayTaken = !!save.taken[today];
+  const todayTaken = isTaken(save, today);
+  const todayTakenAt = todayTaken ? save.taken[today] : undefined;
 
   useEffect(() => {
     saveToStorage(save);
@@ -111,9 +114,17 @@ function App() {
 
   function updateDate(key: ISODate, nextTaken: boolean) {
     setSave((prev) => {
-      const next: SaveDataV1 = {
+      const taken = { ...prev.taken };
+      if (nextTaken) {
+        // Only today's check stores a precise time; historical edits keep "no time".
+        taken[key] = key === today ? Date.now() : null;
+      } else {
+        delete taken[key];
+      }
+
+      const next: SaveData = {
         ...prev,
-        taken: { ...prev.taken, [key]: nextTaken },
+        taken,
         updatedAt: Date.now(),
       };
       return nextTaken ? ensureStartDate(next, key) : next;
@@ -145,7 +156,7 @@ function App() {
       const parsed: unknown = JSON.parse(text);
       const coerced = coerceSave(parsed);
       if (!coerced) {
-        setImportError("Invalid save file (expected version 1).");
+        setImportError("Invalid save file.");
         return;
       }
       setSave(coerced);
@@ -239,6 +250,11 @@ function App() {
               <div className="statusMeta">
                 <div className="metaLabel">Today</div>
                 <div className="metaValue">{subtitleDate}</div>
+                {todayTaken && typeof todayTakenAt === "number" ? (
+                  <div className="metaSubValue">
+                    Taken at {formatHumanTime(new Date(todayTakenAt))}
+                  </div>
+                ) : null}
               </div>
             </div>
 
@@ -310,12 +326,17 @@ function App() {
             {historyKeys.map((key) => {
               const d = makeLocalNoonDateFromISO(key);
               const label = formatHumanDate(d);
-              const checked = !!save.taken[key];
+              const checked = isTaken(save, key);
+              const takenAt = checked ? save.taken[key] : undefined;
               return (
                 <li key={key} className="historyRow">
                   <div className="historyLeft">
                     <div className="historyDate">{label}</div>
-                    <div className="historyKey">{key}</div>
+                    {typeof takenAt === "number" ? (
+                      <div className="historyTime">
+                        Taken at {formatHumanTime(new Date(takenAt))}
+                      </div>
+                    ) : null}
                   </div>
                   <button
                     className={checked ? "toggle on" : "toggle"}

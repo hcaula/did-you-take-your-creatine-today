@@ -7,6 +7,18 @@ export type SaveDataV1 = {
   updatedAt: number
 }
 
+export type TakenAt = number | null
+
+export type SaveDataV2 = {
+  version: 2
+  startDate: ISODate
+  // Presence of key means "taken". Value is ms timestamp (local entry time) or null if unknown.
+  taken: Record<ISODate, TakenAt>
+  updatedAt: number
+}
+
+export type SaveData = SaveDataV2
+
 export const STORAGE_KEY = 'creatine-tracker:v1'
 
 function pad2(n: number) {
@@ -50,6 +62,13 @@ export function formatHumanDate(d: Date) {
   }).format(d)
 }
 
+export function formatHumanTime(d: Date) {
+  return new Intl.DateTimeFormat(undefined, {
+    hour: 'numeric',
+    minute: '2-digit',
+  }).format(d)
+}
+
 export function compareISODate(a: ISODate, b: ISODate) {
   return a < b ? -1 : a > b ? 1 : 0
 }
@@ -62,16 +81,16 @@ export function getHumanToday() {
   return formatHumanDate(new Date())
 }
 
-export function makeDefaultSave(today: ISODate = getTodayKey()): SaveDataV1 {
+export function makeDefaultSave(today: ISODate = getTodayKey()): SaveDataV2 {
   return {
-    version: 1,
+    version: 2,
     startDate: today,
     taken: {},
     updatedAt: Date.now(),
   }
 }
 
-export function loadSave(): SaveDataV1 {
+export function loadSave(): SaveDataV2 {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) return makeDefaultSave()
@@ -83,7 +102,7 @@ export function loadSave(): SaveDataV1 {
   }
 }
 
-export function saveToStorage(data: SaveDataV1) {
+export function saveToStorage(data: SaveDataV2) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...data, updatedAt: Date.now() }))
 }
 
@@ -91,30 +110,49 @@ export function clearStorage() {
   localStorage.removeItem(STORAGE_KEY)
 }
 
-export function coerceSave(input: unknown): SaveDataV1 | null {
+export function coerceSave(input: unknown): SaveDataV2 | null {
   if (!input || typeof input !== 'object') return null
   const obj = input as Record<string, unknown>
-  if (obj.version !== 1) return null
   if (!isISODateKey(obj.startDate)) return null
   const takenRaw = obj.taken
   if (!takenRaw || typeof takenRaw !== 'object') return null
 
-  const taken: Record<ISODate, boolean> = {}
-  for (const [k, v] of Object.entries(takenRaw as Record<string, unknown>)) {
-    if (!isISODateKey(k)) continue
-    if (typeof v !== 'boolean') continue
-    taken[k as ISODate] = v
+  // v2 (preferred)
+  if (obj.version === 2) {
+    const taken: Record<ISODate, TakenAt> = {}
+    for (const [k, v] of Object.entries(takenRaw as Record<string, unknown>)) {
+      if (!isISODateKey(k)) continue
+      if (typeof v === 'number') taken[k as ISODate] = v
+      else if (v === null) taken[k as ISODate] = null
+      // ignore booleans/other unexpected values
+    }
+    return {
+      version: 2,
+      startDate: obj.startDate as ISODate,
+      taken,
+      updatedAt: typeof obj.updatedAt === 'number' ? obj.updatedAt : Date.now(),
+    }
   }
 
-  return {
-    version: 1,
-    startDate: obj.startDate as ISODate,
-    taken,
-    updatedAt: typeof obj.updatedAt === 'number' ? obj.updatedAt : Date.now(),
+  // v1 -> migrate (true => taken with unknown time)
+  if (obj.version === 1) {
+    const taken: Record<ISODate, TakenAt> = {}
+    for (const [k, v] of Object.entries(takenRaw as Record<string, unknown>)) {
+      if (!isISODateKey(k)) continue
+      if (v === true) taken[k as ISODate] = null
+    }
+    return {
+      version: 2,
+      startDate: obj.startDate as ISODate,
+      taken,
+      updatedAt: typeof obj.updatedAt === 'number' ? obj.updatedAt : Date.now(),
+    }
   }
+
+  return null
 }
 
-export function ensureStartDate(save: SaveDataV1, candidate: ISODate) {
+export function ensureStartDate(save: SaveDataV2, candidate: ISODate) {
   if (!save.startDate) return { ...save, startDate: candidate }
   if (compareISODate(candidate, save.startDate) < 0) return { ...save, startDate: candidate }
   return save
@@ -136,13 +174,17 @@ export type StreakInfo = {
   end: ISODate | null
 }
 
-export function computeCurrentStreak(save: SaveDataV1, today: ISODate): StreakInfo {
-  if (!save.taken[today]) return { length: 0, start: null, end: null }
+export function isTaken(save: SaveDataV2, key: ISODate) {
+  return Object.prototype.hasOwnProperty.call(save.taken, key)
+}
+
+export function computeCurrentStreak(save: SaveDataV2, today: ISODate): StreakInfo {
+  if (!isTaken(save, today)) return { length: 0, start: null, end: null }
   let len = 0
   let cursor = makeLocalNoonDateFromISO(today)
   while (true) {
     const key = toISODateKeyLocal(cursor)
-    if (!save.taken[key]) break
+    if (!isTaken(save, key)) break
     len += 1
     cursor = addDaysLocalNoon(cursor, -1)
   }
@@ -150,7 +192,7 @@ export function computeCurrentStreak(save: SaveDataV1, today: ISODate): StreakIn
   return { length: len, start: startKey, end: today }
 }
 
-export function computeBestStreak(save: SaveDataV1, start: ISODate, end: ISODate): StreakInfo {
+export function computeBestStreak(save: SaveDataV2, start: ISODate, end: ISODate): StreakInfo {
   const keysAsc = buildHistoryKeysInclusive(start, end).slice().reverse()
   let bestLen = 0
   let bestStart: ISODate | null = null
@@ -160,7 +202,7 @@ export function computeBestStreak(save: SaveDataV1, start: ISODate, end: ISODate
   let runStart: ISODate | null = null
 
   for (const k of keysAsc) {
-    if (save.taken[k]) {
+    if (isTaken(save, k)) {
       if (runLen === 0) runStart = k
       runLen += 1
       if (runLen > bestLen) {
