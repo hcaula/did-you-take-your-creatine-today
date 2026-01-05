@@ -1,73 +1,76 @@
-# React + TypeScript + Vite
+# Did You Take Your Creatine Today?
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A tiny single-page webapp for tracking your daily creatine dosage.
 
-Currently, two official plugins are available:
+- **Single tap** to check/uncheck today
+- **History list** of days from your first tracked day to today (toggle any date)
+- **Current + best streak** (with date ranges)
+- **Optional taken time**: when you check _today_, we store the current time
+- **Month filter**: view a specific month/year or **All**
+- **Local-only** storage + **Export/Import** JSON backups
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Getting started
 
-## React Compiler
+This is a Vite + React + TypeScript project (uses `pnpm`).
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+pnpm install
+pnpm dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Build/preview:
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+pnpm build
+pnpm preview
 ```
+
+Lint:
+
+```bash
+pnpm lint
+```
+
+## How it works
+
+### Data model (local-only)
+
+Your data is stored in **localStorage** under the key `creatine-tracker:v1`.
+
+- A day is identified by **local calendar date** `YYYY-MM-DD`
+- A day is considered **taken** if it exists in the `taken` map
+- `taken[date]` is either:
+  - a **number** (`Date.now()` timestamp) if you checked **today** (so we can show “Taken at …”)
+  - **null** if the day was marked historically (no time information)
+
+Old saves (boolean-based) are automatically migrated on load.
+
+### Streak rules
+
+- **Current streak**: the most recent consecutive run up to today. If you haven’t checked today yet, the streak can still end **yesterday** (so you don’t “lose” a streak during the day).
+- **Best streak**: longest consecutive run found between your first tracked day and today.
+
+## Using the app
+
+### Backfilling older days
+
+At the bottom of History, click **Set initial date** to expand your timeline earlier (e.g. if you started taking creatine before you began tracking). This only sets the earliest day shown; it does not create entries.
+
+### Export / Import
+
+- **Export** downloads a JSON file of your current data.
+- **Import** replaces your local data with the JSON you select.
+
+Tip: this makes it easy to move data between devices.
+
+## PWA + SEO notes
+
+- Includes `public/manifest.webmanifest` and an app icon (`public/creatine.svg`)
+- Registers a minimal service worker (`public/sw.js`) for basic offline support
+- `index.html` includes a description and Open Graph tags for nicer previews
+
+## Project structure
+
+- `src/App.tsx`: UI + app behavior
+- `src/lib/creatine.ts`: date utilities, storage coercion/migration, streak logic
+- `public/manifest.webmanifest`, `public/sw.js`: PWA basics
