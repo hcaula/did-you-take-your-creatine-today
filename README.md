@@ -1,6 +1,6 @@
 # Did You Take Your Creatine Today?
 
-A tiny single-page webapp for tracking your daily creatine dosage.
+A tiny (more than likely vibe-coded) single-page webapp for tracking your daily creatine dosage.
 
 - **Single tap** to check/uncheck today
 - **History list** of days from your first tracked day to today (toggle any date)
