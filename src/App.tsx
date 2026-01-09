@@ -281,7 +281,7 @@ function App() {
         <div className="brandRow">
           <img
             className="brandIcon"
-            src="/creatine.svg"
+            src={`${import.meta.env.BASE_URL}creatine.svg`}
             alt=""
             aria-hidden="true"
           />
