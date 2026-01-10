@@ -51,7 +51,23 @@ function App() {
   const [startDateError, setStartDateError] = useState<string | null>(null);
   const importInputRef = useRef<HTMLInputElement | null>(null);
 
-  const today = getTodayKey();
+  // Track today as state so it updates when the app is reopened on a new day
+  const [today, setToday] = useState(getTodayKey);
+
+  // Update "today" when the page becomes visible again (e.g., PWA reopened)
+  useEffect(() => {
+    function handleVisibilityChange() {
+      if (document.visibilityState === "visible") {
+        const currentToday = getTodayKey();
+        setToday((prev) => (prev !== currentToday ? currentToday : prev));
+      }
+    }
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, []);
   const todayTaken = isTaken(save, today);
   const todayTakenAt = todayTaken ? save.taken[today] : undefined;
   const currentMonthKey = `${new Date().getFullYear()}-${String(
