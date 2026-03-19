@@ -1,44 +1,32 @@
 :root {
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: 'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   line-height: 1.5;
   font-weight: 400;
 
-  color-scheme: dark;
-  color: rgba(255, 255, 255, 0.92);
-  background-color: #0b1020;
+  color-scheme: light;
+  color: #2d2a26;
+  background-color: #faf7f5;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-
-  --bg1: #0b1020;
-  --bg2: #0a0f1c;
-  --card: rgba(255, 255, 255, 0.06);
-  --border: rgba(255, 255, 255, 0.12);
-  --muted: rgba(255, 255, 255, 0.68);
-  --ok: #22c55e;
-  --bad: #ef4444;
 }
 
 a {
   font-weight: 500;
-  color: #646cff;
+  color: #7c9885;
   text-decoration: inherit;
 }
+
 a:hover {
-  color: #535bf2;
+  color: #5a7a63;
 }
 
 body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
-  background:
-    radial-gradient(1200px 600px at 20% -10%, rgba(124, 58, 237, 0.35), transparent 55%),
-    radial-gradient(900px 540px at 90% 10%, rgba(34, 197, 94, 0.25), transparent 60%),
-    radial-gradient(700px 480px at 40% 110%, rgba(59, 130, 246, 0.18), transparent 55%),
-    linear-gradient(180deg, var(--bg1), var(--bg2));
 }
 
 button {
@@ -48,16 +36,18 @@ button {
   font-size: 1em;
   font-weight: 500;
   font-family: inherit;
-  background-color: rgba(255, 255, 255, 0.05);
+  background-color: rgba(0, 0, 0, 0.04);
   cursor: pointer;
-  transition: border-color 0.25s;
+  transition: all 0.2s;
 }
+
 button:hover {
-  border-color: #646cff;
+  background-color: rgba(0, 0, 0, 0.06);
 }
+
 button:focus,
 button:focus-visible {
-  outline: 3px solid rgba(124, 58, 237, 0.6);
+  outline: 3px solid rgba(124, 152, 133, 0.4);
   outline-offset: 2px;
 }
 

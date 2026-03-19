@@ -21,21 +21,19 @@ import {
 
 function App() {
   const [save, setSave] = useState<SaveData>(() => {
-    // Lazily load to avoid blocking initial paint more than needed.
-    return (() => {
-      try {
-        const raw = localStorage.getItem("creatine-tracker:v1");
-        if (!raw) return makeDefaultSave();
-        const parsed: unknown = JSON.parse(raw);
-        return coerceSave(parsed) ?? makeDefaultSave();
-      } catch {
-        return makeDefaultSave();
-      }
-    })();
+    try {
+      const raw = localStorage.getItem("creatine-tracker:v1");
+      if (!raw) return makeDefaultSave();
+      const parsed: unknown = JSON.parse(raw);
+      return coerceSave(parsed) ?? makeDefaultSave();
+    } catch {
+      return makeDefaultSave();
+    }
   });
 
   const [toast, setToast] = useState<string | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
+  const [showSettings, setShowSettings] = useState(false);
   const [showInitialDate, setShowInitialDate] = useState(false);
   const [startDateDraft, setStartDateDraft] = useState<string>(() => {
     try {
@@ -50,11 +48,10 @@ function App() {
   });
   const [startDateError, setStartDateError] = useState<string | null>(null);
   const importInputRef = useRef<HTMLInputElement | null>(null);
+  const settingsRef = useRef<HTMLDivElement | null>(null);
 
-  // Track today as state so it updates when the app is reopened on a new day
   const [today, setToday] = useState(getTodayKey);
 
-  // Update "today" when the page becomes visible again (e.g., PWA reopened)
   useEffect(() => {
     function handleVisibilityChange() {
       if (document.visibilityState === "visible") {
@@ -62,16 +59,33 @@ function App() {
         setToday((prev) => (prev !== currentToday ? currentToday : prev));
       }
     }
-
     document.addEventListener("visibilitychange", handleVisibilityChange);
     return () => {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, []);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (
+        settingsRef.current &&
+        !settingsRef.current.contains(e.target as Node)
+      ) {
+        setShowSettings(false);
+      }
+    }
+    if (showSettings) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () =>
+        document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [showSettings]);
+
   const todayTaken = isTaken(save, today);
   const todayTakenAt = todayTaken ? save.taken[today] : undefined;
+
   const currentMonthKey = `${new Date().getFullYear()}-${String(
-    new Date().getMonth() + 1
+    new Date().getMonth() + 1,
   ).padStart(2, "0")}`;
   const [monthFilter, setMonthFilter] = useState<string>(currentMonthKey);
 
@@ -102,34 +116,17 @@ function App() {
     });
     const startD = makeLocalNoonDateFromISO(startDate);
     const endD = makeLocalNoonDateFromISO(today);
-    const startMonth = new Date(
-      startD.getFullYear(),
-      startD.getMonth(),
-      1,
-      12,
-      0,
-      0,
-      0
-    );
-    const endMonth = new Date(
-      endD.getFullYear(),
-      endD.getMonth(),
-      1,
-      12,
-      0,
-      0,
-      0
-    );
+    const startMonth = new Date(startD.getFullYear(), startD.getMonth(), 1, 12);
+    const endMonth = new Date(endD.getFullYear(), endD.getMonth(), 1, 12);
 
     const opts: Array<{ value: string; label: string }> = [
       { value: "all", label: "All" },
     ];
 
-    // Most recent -> least recent
     const cursor = new Date(endMonth);
     while (cursor >= startMonth) {
       const value = `${cursor.getFullYear()}-${String(
-        cursor.getMonth() + 1
+        cursor.getMonth() + 1,
       ).padStart(2, "0")}`;
       opts.push({ value, label: fmt.format(cursor) });
       cursor.setMonth(cursor.getMonth() - 1, 1);
@@ -138,7 +135,6 @@ function App() {
   }, [startDate, today]);
 
   useEffect(() => {
-    // Keep default selection as current month when possible.
     if (monthFilter === "all") return;
     if (monthOptions.some((o) => o.value === monthFilter)) return;
     setMonthFilter(currentMonthKey);
@@ -151,46 +147,17 @@ function App() {
 
   const currentStreak = useMemo(
     () => computeCurrentStreak(save, today),
-    [save, today]
+    [save, today],
   );
   const bestStreak = useMemo(
     () => computeBestStreak(save, startDate, today),
-    [save, startDate, today]
-  );
-
-  const statusIcon = todayTaken ? (
-    <svg
-      width="26"
-      height="26"
-      viewBox="0 0 24 24"
-      aria-hidden="true"
-      className="statusIcon ok"
-    >
-      <path
-        fill="currentColor"
-        d="M9.0 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"
-      />
-    </svg>
-  ) : (
-    <svg
-      width="26"
-      height="26"
-      viewBox="0 0 24 24"
-      aria-hidden="true"
-      className="statusIcon no"
-    >
-      <path
-        fill="currentColor"
-        d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm4.7 13.3-1.4 1.4L12 13.4l-3.3 3.3-1.4-1.4L10.6 12 7.3 8.7l1.4-1.4L12 10.6l3.3-3.3 1.4 1.4L13.4 12l3.3 3.3z"
-      />
-    </svg>
+    [save, startDate, today],
   );
 
   function updateDate(key: ISODate, nextTaken: boolean) {
     setSave((prev) => {
       const taken = { ...prev.taken };
       if (nextTaken) {
-        // Only today's check stores a precise time; historical edits keep "no time".
         taken[key] = key === today ? Date.now() : null;
       } else {
         delete taken[key];
@@ -220,7 +187,8 @@ function App() {
     a.click();
     a.remove();
     URL.revokeObjectURL(url);
-    setToast("Exported JSON");
+    setToast("Data exported");
+    setShowSettings(false);
   }
 
   async function importFromFile(file: File) {
@@ -230,13 +198,14 @@ function App() {
       const parsed: unknown = JSON.parse(text);
       const coerced = coerceSave(parsed);
       if (!coerced) {
-        setImportError("Invalid save file.");
+        setImportError("Invalid save file");
         return;
       }
       setSave(coerced);
-      setToast("Imported save data");
+      setToast("Data imported");
+      setShowSettings(false);
     } catch {
-      setImportError("Could not read that file as JSON.");
+      setImportError("Could not read file");
     }
   }
 
@@ -245,190 +214,255 @@ function App() {
   }
 
   function onClear() {
-    if (!confirm("Clear all local data? This cannot be undone.")) return;
+    if (!confirm("Clear all data? This cannot be undone.")) return;
     clearStorage();
     setSave(makeDefaultSave());
-    setToast("Cleared data");
+    setToast("Data cleared");
+    setShowSettings(false);
   }
 
   function applyStartDate() {
     setStartDateError(null);
     const candidate = startDateDraft as ISODate;
-    // `input[type=date]` should already format as YYYY-MM-DD, but validate constraints.
     if (!/^\d{4}-\d{2}-\d{2}$/.test(startDateDraft)) {
-      setStartDateError("Please pick a valid date.");
+      setStartDateError("Please pick a valid date");
       return;
     }
     if (compareISODate(candidate, today) > 0) {
-      setStartDateError("Start date cannot be in the future.");
+      setStartDateError("Cannot be in the future");
       return;
     }
     if (compareISODate(candidate, startDate) > 0) {
-      setStartDateError(
-        "Pick a date on or before your current first tracked day."
-      );
+      setStartDateError("Pick an earlier date");
       return;
     }
-
     setSave((prev) => ensureStartDate(prev, candidate));
-    setToast("Updated first tracked day");
+    setToast("Start date updated");
     setShowInitialDate(false);
   }
 
   const subtitleDate = formatHumanDate(new Date());
 
-  const currentRange =
-    currentStreak.length > 0 && currentStreak.start && currentStreak.end
-      ? `${formatHumanDate(
-          makeLocalNoonDateFromISO(currentStreak.start)
-        )} - ${formatHumanDate(makeLocalNoonDateFromISO(currentStreak.end))}`
-      : "—";
-
-  const bestRange =
-    bestStreak.length > 0 && bestStreak.start && bestStreak.end
-      ? `${formatHumanDate(
-          makeLocalNoonDateFromISO(bestStreak.start)
-        )} - ${formatHumanDate(makeLocalNoonDateFromISO(bestStreak.end))}`
-      : "—";
-
   return (
-    <div className="page">
-      <header className="hero">
-        <div className="brandRow">
-          <img
-            className="brandIcon"
-            src={`${import.meta.env.BASE_URL}creatine.svg`}
-            alt=""
-            aria-hidden="true"
-          />
-          <div className="brandText">
-            <h1 className="title">Did You Take Your Creatine Today?</h1>
-            <p className="subtitle">
-              {subtitleDate} · Local-only storage · Export/Import supported
-            </p>
+    <div className="wellness-page">
+      <div className="wellness-blob wellness-blob-1" />
+      <div className="wellness-blob wellness-blob-2" />
+      <div className="wellness-blob wellness-blob-3" />
+
+      <header className="wellness-header">
+        <div className="wellness-header-row">
+          <div className="wellness-brand">
+            <div className="wellness-icon">
+              <svg viewBox="0 0 40 40" fill="none">
+                <circle
+                  cx="20"
+                  cy="20"
+                  r="18"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                />
+                <path
+                  d="M14 20l4 4 8-8"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </div>
+            <div className="wellness-brand-text">
+              <h1 className="wellness-title">Daily Creatine</h1>
+              <p className="wellness-subtitle">{subtitleDate}</p>
+            </div>
+          </div>
+
+          <div className="wellness-settings-wrap" ref={settingsRef}>
+            <button
+              className="wellness-settings-btn"
+              onClick={() => setShowSettings(!showSettings)}
+              aria-label="Settings"
+              aria-expanded={showSettings}
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <circle cx="12" cy="12" r="3" />
+                <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z" />
+              </svg>
+            </button>
+
+            {showSettings && (
+              <div className="wellness-settings-menu">
+                <button className="wellness-settings-item" onClick={exportData}>
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+                    <polyline points="7 10 12 15 17 10" />
+                    <line x1="12" y1="15" x2="12" y2="3" />
+                  </svg>
+                  Export Data
+                </button>
+                <button
+                  className="wellness-settings-item"
+                  onClick={onPickImport}
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+                    <polyline points="17 8 12 3 7 8" />
+                    <line x1="12" y1="3" x2="12" y2="15" />
+                  </svg>
+                  Import Data
+                </button>
+                <div className="wellness-settings-divider" />
+                <button
+                  className="wellness-settings-item danger"
+                  onClick={onClear}
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <polyline points="3 6 5 6 21 6" />
+                    <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
+                  </svg>
+                  Clear All Data
+                </button>
+                {importError && (
+                  <div className="wellness-settings-error">{importError}</div>
+                )}
+              </div>
+            )}
+            <input
+              ref={importInputRef}
+              className="sr-only"
+              type="file"
+              accept="application/json"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                e.currentTarget.value = "";
+                if (file) void importFromFile(file);
+              }}
+            />
           </div>
         </div>
       </header>
 
-      <main className="content">
-        <section className="topGrid" aria-label="Today">
-          <div className="card statusCard">
-            <div className="statusTop">
-              <div
-                className="statusPill"
-                data-state={todayTaken ? "yes" : "no"}
-              >
-                {statusIcon}
-                <span className="statusText">{todayTaken ? "Yes" : "No"}</span>
-              </div>
-              <div className="statusMeta">
-                <div className="metaLabel">Today</div>
-                <div className="metaValue">{subtitleDate}</div>
-                {todayTaken && typeof todayTakenAt === "number" ? (
-                  <div className="metaSubValue">
-                    Taken at {formatHumanTime(new Date(todayTakenAt))}
-                  </div>
-                ) : null}
-              </div>
-            </div>
-
-            <button
-              className={todayTaken ? "primary danger" : "primary"}
-              onClick={toggleToday}
-              aria-pressed={todayTaken}
+      <main className="wellness-main">
+        <section className="wellness-card wellness-status">
+          <div className="wellness-status-circle">
+            <div
+              className={`wellness-status-inner ${todayTaken ? "done" : ""}`}
             >
-              {todayTaken ? "Uncheck today" : "Check today"}
-            </button>
-
-            <p className="hint">
-              Tip: you can also edit any day below to correct missed entries.
-            </p>
+              {todayTaken ? (
+                <svg viewBox="0 0 24 24" fill="none" className="wellness-check">
+                  <path
+                    d="M5 12l5 5L19 7"
+                    stroke="currentColor"
+                    strokeWidth="3"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              ) : (
+                <span className="wellness-plus">+</span>
+              )}
+            </div>
           </div>
-
-          <div className="card streakCard" aria-label="Streaks">
-            <div className="streakGrid">
-              <div className="streakBox">
-                <div className="streakLabel">Current streak</div>
-                <div className="streakValue">{currentStreak.length} days</div>
-                <div className="streakRange">{currentRange}</div>
-              </div>
-              <div className="streakBox">
-                <div className="streakLabel">Best streak</div>
-                <div className="streakValue">{bestStreak.length} days</div>
-                <div className="streakRange">{bestRange}</div>
-              </div>
+          <div className="wellness-status-text">
+            {todayTaken ? "You're all set!" : "Not yet today"}
+          </div>
+          {todayTaken && typeof todayTakenAt === "number" && (
+            <div className="wellness-status-time">
+              Taken at {formatHumanTime(new Date(todayTakenAt))}
             </div>
+          )}
+          <button
+            className={`wellness-btn ${todayTaken ? "undo" : ""}`}
+            onClick={toggleToday}
+            aria-pressed={todayTaken}
+          >
+            {todayTaken ? "Undo" : "Mark as Taken"}
+          </button>
+        </section>
 
-            <div className="actionsRow">
-              <button className="secondary" onClick={exportData}>
-                Export
-              </button>
-              <button className="secondary" onClick={onPickImport}>
-                Import
-              </button>
-              <button className="secondary subtle" onClick={onClear}>
-                Clear
-              </button>
-              <input
-                ref={importInputRef}
-                className="srOnly"
-                type="file"
-                accept="application/json"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  e.currentTarget.value = "";
-                  if (file) void importFromFile(file);
-                }}
-              />
+        <section className="wellness-streaks">
+          <div className="wellness-card wellness-streak">
+            <div className="wellness-streak-icon">🔥</div>
+            <div className="wellness-streak-content">
+              <div className="wellness-streak-num">{currentStreak.length}</div>
+              <div className="wellness-streak-label">Day Streak</div>
             </div>
-
-            {importError ? (
-              <div className="inlineError">Import error: {importError}</div>
-            ) : null}
+          </div>
+          <div className="wellness-card wellness-streak best">
+            <div className="wellness-streak-icon">⭐</div>
+            <div className="wellness-streak-content">
+              <div className="wellness-streak-num">{bestStreak.length}</div>
+              <div className="wellness-streak-label">Best Streak</div>
+            </div>
           </div>
         </section>
 
-        <section className="card historyCard" aria-label="History">
-          <div className="historyHeader">
-            <div className="historyHeaderTop">
-              <h2 className="h2">History</h2>
-              <select
-                id="month-filter"
-                className="selectInput"
-                value={monthFilter}
-                onChange={(e) => setMonthFilter(e.target.value)}
-                aria-label="Filter history by month"
-              >
-                {monthOptions.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="historyNote">
-              From your first tracked day to today · Most recent first
-            </div>
+        <section className="wellness-card wellness-history">
+          <div className="wellness-history-header">
+            <h2 className="wellness-h2">Recent Activity</h2>
+            <select
+              className="wellness-select"
+              value={monthFilter}
+              onChange={(e) => setMonthFilter(e.target.value)}
+              aria-label="Filter by month"
+            >
+              {monthOptions.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
           </div>
-
-          <ul className="historyList">
+          <div className="wellness-history-list">
             {filteredHistoryKeys.map((key) => {
               const d = makeLocalNoonDateFromISO(key);
               const label = formatHumanDate(d);
               const checked = isTaken(save, key);
               const takenAt = checked ? save.taken[key] : undefined;
               return (
-                <li key={key} className="historyRow">
-                  <div className="historyLeft">
-                    <div className="historyDate">{label}</div>
-                    {typeof takenAt === "number" ? (
-                      <div className="historyTime">
-                        Taken at {formatHumanTime(new Date(takenAt))}
-                      </div>
-                    ) : null}
+                <div key={key} className="wellness-history-row">
+                  <div className="wellness-history-left">
+                    <div
+                      className={`wellness-history-dot ${checked ? "done" : ""}`}
+                    />
+                    <div className="wellness-history-info">
+                      <div className="wellness-history-date">{label}</div>
+                      {typeof takenAt === "number" && (
+                        <div className="wellness-history-time">
+                          {formatHumanTime(new Date(takenAt))}
+                        </div>
+                      )}
+                    </div>
                   </div>
                   <button
-                    className={checked ? "toggle on" : "toggle"}
+                    className={`wellness-history-toggle ${checked ? "done" : ""}`}
                     onClick={() => updateDate(key, !checked)}
                     aria-pressed={checked}
                     aria-label={
@@ -437,37 +471,31 @@ function App() {
                         : `Mark ${label} as taken`
                     }
                   >
-                    <span className="toggleDot" aria-hidden="true" />
-                    <span className="toggleText">
-                      {checked ? "Taken" : "Not taken"}
-                    </span>
+                    {checked ? "Taken" : "Missed"}
                   </button>
-                </li>
+                </div>
               );
             })}
-          </ul>
+          </div>
 
-          <div className="historyFooter">
+          <div className="wellness-history-footer">
             <button
-              className="secondary"
+              className="wellness-link-btn"
               onClick={() => {
                 setStartDateError(null);
-                setShowInitialDate((v) => !v);
+                setShowInitialDate(!showInitialDate);
               }}
               aria-expanded={showInitialDate}
             >
-              {showInitialDate ? "Hide initial date" : "Set initial date"}
+              {showInitialDate ? "Hide" : "Change start date"}
             </button>
 
-            {showInitialDate ? (
-              <div
-                className="initialDatePanel"
-                aria-label="Set initial tracked date"
-              >
-                <label className="historyLabel">
-                  Initial date to show
+            {showInitialDate && (
+              <div className="wellness-start-date-panel">
+                <label className="wellness-date-label">
+                  First tracked day
                   <input
-                    className="dateInput"
+                    className="wellness-date-input"
                     type="date"
                     value={startDateDraft}
                     max={today}
@@ -477,40 +505,23 @@ function App() {
                     }}
                   />
                 </label>
-                <div className="initialDateActions">
-                  <button className="secondary" onClick={applyStartDate}>
-                    Apply
-                  </button>
-                </div>
-                {startDateError ? (
-                  <div className="inlineError">{startDateError}</div>
-                ) : null}
+                <button className="wellness-btn-sm" onClick={applyStartDate}>
+                  Apply
+                </button>
+                {startDateError && (
+                  <div className="wellness-inline-error">{startDateError}</div>
+                )}
               </div>
-            ) : null}
+            )}
           </div>
         </section>
-
-        <footer className="footer">
-          <div className="footerInner">
-            <span>Data stays on your device.</span>
-            <span className="footerSep">·</span>
-            <span>
-              Pro tip: "Add to Home Screen" for an app-like experience.
-            </span>
-          </div>
-          <div className="footerDisclaimer">
-            This app is a personal tracking tool only and does not provide
-            medical advice. Consult a healthcare professional before starting
-            any supplement.
-          </div>
-        </footer>
       </main>
 
-      {toast ? (
-        <div className="toast" role="status">
+      {toast && (
+        <div className="wellness-toast" role="status">
           {toast}
         </div>
-      ) : null}
+      )}
     </div>
   );
 }
