@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap");
 
 .wellness-page {
   --well-bg: #faf7f5;
@@ -12,7 +12,11 @@
   --well-card: rgba(255, 255, 255, 0.8);
   --well-danger: #d97474;
 
-  font-family: 'Nunito', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family:
+    "Nunito",
+    -apple-system,
+    BlinkMacSystemFont,
+    sans-serif;
   background: var(--well-bg);
   color: var(--well-fg);
   min-height: 100vh;
@@ -59,9 +63,16 @@
 }
 
 @keyframes wellness-float {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  33% { transform: translate(30px, -20px) scale(1.05); }
-  66% { transform: translate(-20px, 20px) scale(0.95); }
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  33% {
+    transform: translate(30px, -20px) scale(1.05);
+  }
+  66% {
+    transform: translate(-20px, 20px) scale(0.95);
+  }
 }
 
 /* Header */
@@ -150,7 +161,7 @@
   background: #fff;
   border-radius: 16px;
   padding: 8px;
-  box-shadow: 
+  box-shadow:
     0 4px 24px rgba(124, 152, 133, 0.15),
     0 1px 4px rgba(0, 0, 0, 0.05);
   animation: wellness-menu-in 0.2s ease-out;
@@ -233,7 +244,7 @@
   backdrop-filter: blur(20px);
   border-radius: 24px;
   padding: 24px;
-  box-shadow: 
+  box-shadow:
     0 4px 24px rgba(124, 152, 133, 0.08),
     0 1px 4px rgba(0, 0, 0, 0.04);
 }
@@ -250,18 +261,23 @@
   margin: 0 auto 20px;
   border-radius: 50%;
   padding: 6px;
-  background: linear-gradient(135deg, var(--well-sage-light), var(--well-peach));
+  background: linear-gradient(
+    135deg,
+    var(--well-sage-light),
+    var(--well-peach)
+  );
   animation: wellness-pulse 3s ease-in-out infinite;
 }
 
 @keyframes wellness-pulse {
-  0%, 100% { 
-    transform: scale(1); 
-    box-shadow: 0 0 0 0 rgba(124, 152, 133, 0.2); 
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(124, 152, 133, 0.2);
   }
-  50% { 
-    transform: scale(1.02); 
-    box-shadow: 0 0 0 16px rgba(124, 152, 133, 0); 
+  50% {
+    transform: scale(1.02);
+    box-shadow: 0 0 0 16px rgba(124, 152, 133, 0);
   }
 }
 
@@ -387,15 +403,62 @@
 .wellness-history-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
+  flex-wrap: wrap;
   gap: 12px;
   margin-bottom: 16px;
+}
+
+.wellness-history-heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
 }
 
 .wellness-h2 {
   font-size: 1rem;
   font-weight: 700;
   margin: 0;
+}
+
+.wellness-view-toggle {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.wellness-view-tab {
+  padding: 6px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--well-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s;
+}
+
+.wellness-view-tab svg {
+  width: 19px;
+  height: 19px;
+  display: block;
+}
+
+.wellness-view-tab:hover {
+  color: var(--well-fg);
+}
+
+.wellness-view-tab.active {
+  color: var(--well-sage-dark);
+}
+
+.wellness-view-tab:focus-visible {
+  outline: 2px solid var(--well-sage);
+  outline-offset: 2px;
 }
 
 .wellness-select {
@@ -502,6 +565,153 @@
 .wellness-history-toggle.done {
   background: var(--well-sage-light);
   color: #4a6b52;
+}
+
+/* Activity calendar */
+.wellness-calendar {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.wellness-calendar-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 2px 2px;
+}
+
+.wellness-cal-nav-btn {
+  padding: 6px;
+  flex-shrink: 0;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--well-sage-dark);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    color 0.15s,
+    opacity 0.15s;
+}
+
+.wellness-cal-nav-btn svg {
+  width: 26px;
+  height: 26px;
+  display: block;
+}
+
+.wellness-cal-nav-btn:hover:not(:disabled) {
+  color: var(--well-sage);
+}
+
+.wellness-cal-nav-btn:disabled {
+  color: var(--well-fg);
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.wellness-cal-nav-btn:focus-visible {
+  outline: 2px solid var(--well-sage);
+  outline-offset: 2px;
+}
+
+.wellness-calendar-month {
+  font-size: 0.95rem;
+  font-weight: 700;
+  text-align: center;
+  flex: 1;
+  min-width: 0;
+  color: var(--well-fg);
+}
+
+.wellness-cal-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+  padding: 0 2px;
+}
+
+.wellness-cal-weekday {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--well-muted);
+  text-align: center;
+}
+
+.wellness-cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+}
+
+.wellness-cal-cell-wrap {
+  min-width: 0;
+}
+
+.wellness-cal-day {
+  width: 100%;
+  aspect-ratio: 1;
+  max-height: 48px;
+  margin: 0 auto;
+  border: none;
+  border-radius: 12px;
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    transform 0.12s,
+    box-shadow 0.12s,
+    background 0.12s;
+  box-sizing: border-box;
+}
+
+.wellness-cal-day-num {
+  line-height: 1;
+}
+
+.wellness-cal-day.missed {
+  background: rgba(245, 208, 197, 0.55);
+  color: #8b6b60;
+}
+
+.wellness-cal-day.missed:hover {
+  filter: brightness(0.97);
+}
+
+.wellness-cal-day.done {
+  background: var(--well-sage);
+  color: #fff;
+  box-shadow: 0 2px 10px rgba(124, 152, 133, 0.35);
+}
+
+.wellness-cal-day.done:hover {
+  filter: brightness(1.03);
+}
+
+.wellness-cal-day.today {
+  box-shadow: 0 0 0 2px var(--well-sage-dark);
+}
+
+.wellness-cal-day.out {
+  background: rgba(0, 0, 0, 0.04);
+  color: rgba(45, 42, 38, 0.28);
+  cursor: default;
+  pointer-events: none;
+}
+
+.wellness-cal-day:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(124, 152, 133, 0.45);
 }
 
 /* History footer */
