@@ -230,4 +230,66 @@ export function computeBestStreak(save: SaveDataV2, start: ISODate, end: ISODate
   return { length: bestLen, start: bestStart, end: bestEnd }
 }
 
+function maxISODate(a: ISODate, b: ISODate): ISODate {
+  return compareISODate(a, b) >= 0 ? a : b
+}
+
+function minISODate(a: ISODate, b: ISODate): ISODate {
+  return compareISODate(a, b) <= 0 ? a : b
+}
+
+/** Inclusive calendar-day count between two ISO date keys (same rules as the rest of the app: local noon stepping). */
+export function countCalendarDaysInclusive(from: ISODate, to: ISODate): number {
+  if (compareISODate(from, to) > 0) return 0
+  let n = 0
+  for (
+    let d = makeLocalNoonDateFromISO(from);
+    compareISODate(toISODateKeyLocal(d), to) <= 0;
+    d = addDaysLocalNoon(d, 1)
+  ) {
+    n += 1
+  }
+  return n
+}
+
+export function countTakenInRange(save: SaveDataV2, from: ISODate, to: ISODate): number {
+  if (compareISODate(from, to) > 0) return 0
+  let n = 0
+  for (const k of Object.keys(save.taken)) {
+    if (!isISODateKey(k)) continue
+    const key = k as ISODate
+    if (compareISODate(key, from) >= 0 && compareISODate(key, to) <= 0) n += 1
+  }
+  return n
+}
+
+/**
+ * Intersects [periodStart, periodEnd] with the active tracking window [trackStart, trackEnd].
+ * Returns null when there is no overlap.
+ */
+export function intersectTrackingWindow(
+  periodStart: ISODate,
+  periodEnd: ISODate,
+  trackStart: ISODate,
+  trackEnd: ISODate,
+): { from: ISODate; to: ISODate } | null {
+  const from = maxISODate(periodStart, trackStart)
+  const to = minISODate(periodEnd, trackEnd)
+  if (compareISODate(from, to) > 0) return null
+  return { from, to }
+}
+
+export function calendarYearBounds(year: number): { start: ISODate; end: ISODate } {
+  return {
+    start: `${year}-01-01` as ISODate,
+    end: `${year}-12-31` as ISODate,
+  }
+}
+
+export function calendarMonthBounds(year: number, month1to12: number): { start: ISODate; end: ISODate } {
+  return {
+    start: `${year}-${pad2(month1to12)}-01` as ISODate,
+    end: toISODateKeyLocal(new Date(year, month1to12, 0, 12, 0, 0, 0)),
+  }
+}
 

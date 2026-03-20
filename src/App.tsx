@@ -2,15 +2,20 @@ import "./App.css";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   addDaysLocalNoon,
+  calendarMonthBounds,
+  calendarYearBounds,
   clearStorage,
   coerceSave,
   compareISODate,
   computeBestStreak,
   computeCurrentStreak,
+  countCalendarDaysInclusive,
+  countTakenInRange,
   ensureStartDate,
   formatHumanDate,
   formatHumanTime,
   getTodayKey,
+  intersectTrackingWindow,
   isTaken,
   makeDefaultSave,
   makeLocalNoonDateFromISO,
@@ -179,6 +184,58 @@ function App() {
     () => computeBestStreak(save, startDate, today),
     [save, startDate, today],
   );
+
+  const analytics = useMemo(() => {
+    const trackStart = startDate;
+    const trackEnd = today;
+    const todayParts = makeLocalNoonDateFromISO(today);
+    const y = todayParts.getFullYear();
+    const m = todayParts.getMonth() + 1;
+
+    const yBounds = calendarYearBounds(y);
+    const yearWindow = intersectTrackingWindow(
+      yBounds.start,
+      yBounds.end,
+      trackStart,
+      trackEnd,
+    );
+    const monthWindow = intersectTrackingWindow(
+      calendarMonthBounds(y, m).start,
+      calendarMonthBounds(y, m).end,
+      trackStart,
+      trackEnd,
+    );
+
+    function windowStat(w: { from: ISODate; to: ISODate } | null) {
+      if (!w) {
+        return { taken: 0, trackedDays: 0, rate: null as number | null };
+      }
+      const trackedDays = countCalendarDaysInclusive(w.from, w.to);
+      const taken = countTakenInRange(save, w.from, w.to);
+      const rate =
+        trackedDays > 0 ? Math.round((taken / trackedDays) * 100) : null;
+      return { taken, trackedDays, rate };
+    }
+
+    const allTracked = countCalendarDaysInclusive(trackStart, trackEnd);
+    const allTaken = countTakenInRange(save, trackStart, trackEnd);
+    const allRate =
+      allTracked > 0 ? Math.round((allTaken / allTracked) * 100) : null;
+
+    return {
+      year: windowStat(yearWindow),
+      month: windowStat(monthWindow),
+      allTime: {
+        taken: allTaken,
+        trackedDays: allTracked,
+        rate: allRate,
+      },
+      monthHeading: new Intl.DateTimeFormat(undefined, {
+        month: "long",
+        year: "numeric",
+      }).format(new Date(y, m - 1, 1, 12)),
+    };
+  }, [save, startDate, today]);
 
   function updateDate(key: ISODate, nextTaken: boolean) {
     setSave((prev) => {
@@ -609,6 +666,96 @@ function App() {
               })}
             </div>
           </div>
+        </section>
+
+        <section className="wellness-card wellness-analytics" aria-label="Stats">
+          <ul className="wellness-analytics-list">
+            <li className="wellness-analytics-item">
+              <div className="wellness-analytics-item-top">
+                <span className="wellness-analytics-item-label">This month</span>
+                <span className="wellness-analytics-item-value">
+                  {analytics.month.taken} / {analytics.month.trackedDays} days
+                  {analytics.month.rate != null && (
+                    <span className="wellness-analytics-pct">
+                      {" "}
+                      · {analytics.month.rate}%
+                    </span>
+                  )}
+                </span>
+              </div>
+              <div
+                className="wellness-analytics-bar"
+                role="presentation"
+                aria-hidden
+              >
+                <div
+                  className="wellness-analytics-bar-fill"
+                  style={{
+                    width: `${analytics.month.trackedDays ? (analytics.month.taken / analytics.month.trackedDays) * 100 : 0}%`,
+                  }}
+                />
+              </div>
+              <div className="wellness-analytics-item-caption">
+                {analytics.monthHeading}
+              </div>
+            </li>
+            <li className="wellness-analytics-item">
+              <div className="wellness-analytics-item-top">
+                <span className="wellness-analytics-item-label">This year</span>
+                <span className="wellness-analytics-item-value">
+                  {analytics.year.taken} / {analytics.year.trackedDays} days
+                  {analytics.year.rate != null && (
+                    <span className="wellness-analytics-pct">
+                      {" "}
+                      · {analytics.year.rate}%
+                    </span>
+                  )}
+                </span>
+              </div>
+              <div
+                className="wellness-analytics-bar"
+                role="presentation"
+                aria-hidden
+              >
+                <div
+                  className="wellness-analytics-bar-fill wellness-analytics-bar-fill--muted"
+                  style={{
+                    width: `${analytics.year.trackedDays ? (analytics.year.taken / analytics.year.trackedDays) * 100 : 0}%`,
+                  }}
+                />
+              </div>
+            </li>
+            <li className="wellness-analytics-item">
+              <div className="wellness-analytics-item-top">
+                <span className="wellness-analytics-item-label">All time</span>
+                <span className="wellness-analytics-item-value">
+                  {analytics.allTime.taken} / {analytics.allTime.trackedDays}{" "}
+                  days
+                  {analytics.allTime.rate != null && (
+                    <span className="wellness-analytics-pct">
+                      {" "}
+                      · {analytics.allTime.rate}%
+                    </span>
+                  )}
+                </span>
+              </div>
+              <div
+                className="wellness-analytics-bar"
+                role="presentation"
+                aria-hidden
+              >
+                <div
+                  className="wellness-analytics-bar-fill wellness-analytics-bar-fill--lavender"
+                  style={{
+                    width: `${analytics.allTime.trackedDays ? (analytics.allTime.taken / analytics.allTime.trackedDays) * 100 : 0}%`,
+                  }}
+                />
+              </div>
+              <div className="wellness-analytics-item-caption">
+                Since {formatHumanDate(makeLocalNoonDateFromISO(startDate))}
+              </div>
+            </li>
+          </ul>
         </section>
       </main>
 
