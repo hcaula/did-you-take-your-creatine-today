@@ -1,5 +1,5 @@
 import "./App.css";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   addDaysLocalNoon,
   buildHistoryKeysInclusive,
@@ -66,13 +66,19 @@ function App() {
     };
   }, []);
 
+  const closeSettingsMenu = useCallback(() => {
+    setShowSettings(false);
+    setShowInitialDate(false);
+    setStartDateError(null);
+  }, []);
+
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (
         settingsRef.current &&
         !settingsRef.current.contains(e.target as Node)
       ) {
-        setShowSettings(false);
+        closeSettingsMenu();
       }
     }
     if (showSettings) {
@@ -80,7 +86,7 @@ function App() {
       return () =>
         document.removeEventListener("mousedown", handleClickOutside);
     }
-  }, [showSettings]);
+  }, [showSettings, closeSettingsMenu]);
 
   const todayTaken = isTaken(save, today);
   const todayTakenAt = todayTaken ? save.taken[today] : undefined;
@@ -259,7 +265,7 @@ function App() {
     a.remove();
     URL.revokeObjectURL(url);
     setToast("Data exported");
-    setShowSettings(false);
+    closeSettingsMenu();
   }
 
   async function importFromFile(file: File) {
@@ -274,7 +280,7 @@ function App() {
       }
       setSave(coerced);
       setToast("Data imported");
-      setShowSettings(false);
+      closeSettingsMenu();
     } catch {
       setImportError("Could not read file");
     }
@@ -289,7 +295,7 @@ function App() {
     clearStorage();
     setSave(makeDefaultSave());
     setToast("Data cleared");
-    setShowSettings(false);
+    closeSettingsMenu();
   }
 
   function applyStartDate() {
@@ -350,7 +356,9 @@ function App() {
           <div className="wellness-settings-wrap" ref={settingsRef}>
             <button
               className="wellness-settings-btn"
-              onClick={() => setShowSettings(!showSettings)}
+              onClick={() =>
+                showSettings ? closeSettingsMenu() : setShowSettings(true)
+              }
               aria-label="Settings"
               aria-expanded={showSettings}
             >
@@ -402,6 +410,66 @@ function App() {
                   </svg>
                   Import Data
                 </button>
+                <button
+                  type="button"
+                  className="wellness-settings-item"
+                  onClick={() => {
+                    setStartDateError(null);
+                    if (!showInitialDate) {
+                      setStartDateDraft(save.startDate ?? today);
+                    }
+                    setShowInitialDate(!showInitialDate);
+                  }}
+                  aria-expanded={showInitialDate}
+                  aria-controls="wellness-settings-start-date-fields"
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                    <line x1="16" y1="2" x2="16" y2="6" />
+                    <line x1="8" y1="2" x2="8" y2="6" />
+                    <line x1="3" y1="10" x2="21" y2="10" />
+                  </svg>
+                  Tracking start date
+                </button>
+                {showInitialDate && (
+                  <div
+                    id="wellness-settings-start-date-fields"
+                    className="wellness-settings-subpanel"
+                  >
+                    <label className="wellness-date-label">
+                      First tracked day
+                      <input
+                        className="wellness-date-input"
+                        type="date"
+                        value={startDateDraft}
+                        max={today}
+                        onChange={(e) => {
+                          setStartDateError(null);
+                          setStartDateDraft(e.target.value);
+                        }}
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      className="wellness-btn-sm wellness-btn-sm--menu"
+                      onClick={applyStartDate}
+                    >
+                      Apply
+                    </button>
+                    {startDateError && (
+                      <div className="wellness-inline-error">
+                        {startDateError}
+                      </div>
+                    )}
+                  </div>
+                )}
                 <div className="wellness-settings-divider" />
                 <button
                   className="wellness-settings-item danger"
@@ -705,43 +773,6 @@ function App() {
               </div>
             </div>
           )}
-
-          <div className="wellness-history-footer">
-            <button
-              className="wellness-link-btn"
-              onClick={() => {
-                setStartDateError(null);
-                setShowInitialDate(!showInitialDate);
-              }}
-              aria-expanded={showInitialDate}
-            >
-              {showInitialDate ? "Hide" : "Change start date"}
-            </button>
-
-            {showInitialDate && (
-              <div className="wellness-start-date-panel">
-                <label className="wellness-date-label">
-                  First tracked day
-                  <input
-                    className="wellness-date-input"
-                    type="date"
-                    value={startDateDraft}
-                    max={today}
-                    onChange={(e) => {
-                      setStartDateError(null);
-                      setStartDateDraft(e.target.value);
-                    }}
-                  />
-                </label>
-                <button className="wellness-btn-sm" onClick={applyStartDate}>
-                  Apply
-                </button>
-                {startDateError && (
-                  <div className="wellness-inline-error">{startDateError}</div>
-                )}
-              </div>
-            )}
-          </div>
         </section>
       </main>
 
