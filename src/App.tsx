@@ -2,7 +2,6 @@ import "./App.css";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   addDaysLocalNoon,
-  buildHistoryKeysInclusive,
   clearStorage,
   coerceSave,
   compareISODate,
@@ -91,11 +90,6 @@ function App() {
   const todayTaken = isTaken(save, today);
   const todayTakenAt = todayTaken ? save.taken[today] : undefined;
 
-  const currentMonthKey = `${new Date().getFullYear()}-${String(
-    new Date().getMonth() + 1,
-  ).padStart(2, "0")}`;
-  const [monthFilter, setMonthFilter] = useState<string>(currentMonthKey);
-
   useEffect(() => {
     saveToStorage(save);
   }, [save]);
@@ -112,48 +106,9 @@ function App() {
     setStartDateDraft(save.startDate ?? today);
   }, [save.startDate, today]);
 
-  const historyKeys = useMemo(() => {
-    return buildHistoryKeysInclusive(startDate, today);
-  }, [startDate, today]);
-
-  const monthOptions = useMemo(() => {
-    const fmt = new Intl.DateTimeFormat(undefined, {
-      month: "short",
-      year: "numeric",
-    });
-    const startD = makeLocalNoonDateFromISO(startDate);
-    const endD = makeLocalNoonDateFromISO(today);
-    const startMonth = new Date(startD.getFullYear(), startD.getMonth(), 1, 12);
-    const endMonth = new Date(endD.getFullYear(), endD.getMonth(), 1, 12);
-
-    const opts: Array<{ value: string; label: string }> = [
-      { value: "all", label: "All" },
-    ];
-
-    const cursor = new Date(endMonth);
-    while (cursor >= startMonth) {
-      const value = `${cursor.getFullYear()}-${String(
-        cursor.getMonth() + 1,
-      ).padStart(2, "0")}`;
-      opts.push({ value, label: fmt.format(cursor) });
-      cursor.setMonth(cursor.getMonth() - 1, 1);
-    }
-    return opts;
-  }, [startDate, today]);
-
-  useEffect(() => {
-    if (monthFilter === "all") return;
-    if (monthOptions.some((o) => o.value === monthFilter)) return;
-    setMonthFilter(currentMonthKey);
-  }, [monthFilter, monthOptions, currentMonthKey]);
-
-  const [activityView, setActivityView] = useState<"list" | "calendar">(
-    "calendar",
+  const [calendarMonthKey, setCalendarMonthKey] = useState(() =>
+    getTodayKey().slice(0, 7),
   );
-  const [calendarMonthKey, setCalendarMonthKey] = useState(currentMonthKey);
-
-  const displayMonthKey =
-    monthFilter === "all" ? calendarMonthKey : monthFilter;
 
   const monthNavBounds = useMemo(() => {
     const startD = makeLocalNoonDateFromISO(startDate);
@@ -173,7 +128,7 @@ function App() {
   }, []);
 
   const calendarCells = useMemo(() => {
-    const [yStr, mStr] = displayMonthKey.split("-");
+    const [yStr, mStr] = calendarMonthKey.split("-");
     const y = Number(yStr);
     const monthIndex = Number(mStr) - 1;
     const first = new Date(y, monthIndex, 1, 12, 0, 0, 0);
@@ -194,33 +149,27 @@ function App() {
       cells.push({ key: iso, iso, inRange, label: d });
     }
     return cells;
-  }, [displayMonthKey, startDate, today]);
+  }, [calendarMonthKey, startDate, today]);
 
   const displayMonthLabel = useMemo(() => {
-    const [yStr, mStr] = displayMonthKey.split("-");
+    const [yStr, mStr] = calendarMonthKey.split("-");
     const d = new Date(Number(yStr), Number(mStr) - 1, 1, 12);
     return new Intl.DateTimeFormat(undefined, {
       month: "long",
       year: "numeric",
     }).format(d);
-  }, [displayMonthKey]);
+  }, [calendarMonthKey]);
 
   function shiftActivityMonth(delta: number) {
-    const [yStr, mStr] = displayMonthKey.split("-");
+    const [yStr, mStr] = calendarMonthKey.split("-");
     const next = new Date(Number(yStr), Number(mStr) - 1 + delta, 1, 12);
     const nextKey = `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, "0")}`;
     if (nextKey < monthNavBounds.min || nextKey > monthNavBounds.max) return;
-    if (monthFilter === "all") setCalendarMonthKey(nextKey);
-    else setMonthFilter(nextKey);
+    setCalendarMonthKey(nextKey);
   }
 
-  const canPrevMonth = displayMonthKey > monthNavBounds.min;
-  const canNextMonth = displayMonthKey < monthNavBounds.max;
-
-  const filteredHistoryKeys = useMemo(() => {
-    if (monthFilter === "all") return historyKeys;
-    return historyKeys.filter((k) => k.slice(0, 7) === monthFilter);
-  }, [historyKeys, monthFilter]);
+  const canPrevMonth = calendarMonthKey > monthNavBounds.min;
+  const canNextMonth = calendarMonthKey < monthNavBounds.max;
 
   const currentStreak = useMemo(
     () => computeCurrentStreak(save, today),
@@ -564,215 +513,102 @@ function App() {
         </section>
 
         <section className="wellness-card wellness-history">
-          <div className="wellness-history-header">
-            <div className="wellness-history-heading">
-              <h2 className="wellness-h2">Recent Activity</h2>
-              <div
-                className="wellness-view-toggle"
-                role="group"
-                aria-label="Activity view"
+          <div className="wellness-calendar">
+            <div className="wellness-calendar-nav">
+              <button
+                type="button"
+                className="wellness-cal-nav-btn"
+                onClick={() => shiftActivityMonth(-1)}
+                disabled={!canPrevMonth}
+                aria-label="Previous month"
               >
-                <button
-                  type="button"
-                  className={`wellness-view-tab ${activityView === "calendar" ? "active" : ""}`}
-                  onClick={() => setActivityView("calendar")}
-                  aria-pressed={activityView === "calendar"}
-                  aria-label="Calendar view"
-                  title="Calendar view"
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
                 >
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-                    <line x1="16" y1="2" x2="16" y2="6" />
-                    <line x1="8" y1="2" x2="8" y2="6" />
-                    <line x1="3" y1="10" x2="21" y2="10" />
-                  </svg>
-                </button>
-                <button
-                  type="button"
-                  className={`wellness-view-tab ${activityView === "list" ? "active" : ""}`}
-                  onClick={() => setActivityView("list")}
-                  aria-pressed={activityView === "list"}
-                  aria-label="List view"
-                  title="List view"
-                >
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <line x1="8" y1="6" x2="21" y2="6" />
-                    <line x1="8" y1="12" x2="21" y2="12" />
-                    <line x1="8" y1="18" x2="21" y2="18" />
-                    <line x1="3" y1="6" x2="3.01" y2="6" />
-                    <line x1="3" y1="12" x2="3.01" y2="12" />
-                    <line x1="3" y1="18" x2="3.01" y2="18" />
-                  </svg>
-                </button>
+                  <polyline points="15 18 9 12 15 6" />
+                </svg>
+              </button>
+              <div className="wellness-calendar-month" aria-live="polite">
+                {displayMonthLabel}
               </div>
+              <button
+                type="button"
+                className="wellness-cal-nav-btn"
+                onClick={() => shiftActivityMonth(1)}
+                disabled={!canNextMonth}
+                aria-label="Next month"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <polyline points="9 18 15 12 9 6" />
+                </svg>
+              </button>
             </div>
-            <select
-              className="wellness-select"
-              value={monthFilter}
-              onChange={(e) => {
-                const v = e.target.value;
-                setMonthFilter(v);
-                if (v !== "all") setCalendarMonthKey(v);
-              }}
-              aria-label="Filter by month"
-            >
-              {monthOptions.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
+            <div className="wellness-cal-weekdays">
+              {weekdayLabels.map((w) => (
+                <div key={w} className="wellness-cal-weekday">
+                  {w}
+                </div>
               ))}
-            </select>
-          </div>
-          {activityView === "list" ? (
-            <div className="wellness-history-list">
-              {filteredHistoryKeys.map((key) => {
-                const d = makeLocalNoonDateFromISO(key);
-                const label = formatHumanDate(d);
-                const checked = isTaken(save, key);
-                const takenAt = checked ? save.taken[key] : undefined;
-                return (
-                  <div key={key} className="wellness-history-row">
-                    <div className="wellness-history-left">
-                      <div
-                        className={`wellness-history-dot ${checked ? "done" : ""}`}
-                      />
-                      <div className="wellness-history-info">
-                        <div className="wellness-history-date">{label}</div>
-                        {typeof takenAt === "number" && (
-                          <div className="wellness-history-time">
-                            {formatHumanTime(new Date(takenAt))}
-                          </div>
-                        )}
+            </div>
+            <div className="wellness-cal-grid">
+              {calendarCells.map((cell, i) => {
+                if (!cell) {
+                  return (
+                    <div
+                      key={`cal-pad-${i}`}
+                      className="wellness-cal-cell-wrap"
+                    />
+                  );
+                }
+                const checked = isTaken(save, cell.iso);
+                const dayLabel = formatHumanDate(
+                  makeLocalNoonDateFromISO(cell.iso),
+                );
+                if (!cell.inRange) {
+                  return (
+                    <div key={cell.key} className="wellness-cal-cell-wrap">
+                      <div className="wellness-cal-day out" aria-hidden>
+                        <span className="wellness-cal-day-num">
+                          {cell.label}
+                        </span>
                       </div>
                     </div>
+                  );
+                }
+                return (
+                  <div key={cell.key} className="wellness-cal-cell-wrap">
                     <button
-                      className={`wellness-history-toggle ${checked ? "done" : ""}`}
-                      onClick={() => updateDate(key, !checked)}
-                      aria-pressed={checked}
+                      type="button"
+                      className={`wellness-cal-day ${checked ? "done" : "missed"} ${cell.iso === today ? "today" : ""}`}
+                      onClick={() => updateDate(cell.iso, !checked)}
                       aria-label={
                         checked
-                          ? `Mark ${label} as not taken`
-                          : `Mark ${label} as taken`
+                          ? `Creatine taken ${dayLabel}, mark as not taken`
+                          : `Creatine not taken ${dayLabel}, mark as taken`
                       }
+                      aria-pressed={checked}
                     >
-                      {checked ? "Taken" : "Missed"}
+                      <span className="wellness-cal-day-num">
+                        {cell.label}
+                      </span>
                     </button>
                   </div>
                 );
               })}
             </div>
-          ) : (
-            <div className="wellness-calendar">
-              <div className="wellness-calendar-nav">
-                <button
-                  type="button"
-                  className="wellness-cal-nav-btn"
-                  onClick={() => shiftActivityMonth(-1)}
-                  disabled={!canPrevMonth}
-                  aria-label="Previous month"
-                >
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <polyline points="15 18 9 12 15 6" />
-                  </svg>
-                </button>
-                <div className="wellness-calendar-month" aria-live="polite">
-                  {displayMonthLabel}
-                </div>
-                <button
-                  type="button"
-                  className="wellness-cal-nav-btn"
-                  onClick={() => shiftActivityMonth(1)}
-                  disabled={!canNextMonth}
-                  aria-label="Next month"
-                >
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <polyline points="9 18 15 12 9 6" />
-                  </svg>
-                </button>
-              </div>
-              <div className="wellness-cal-weekdays">
-                {weekdayLabels.map((w) => (
-                  <div key={w} className="wellness-cal-weekday">
-                    {w}
-                  </div>
-                ))}
-              </div>
-              <div className="wellness-cal-grid">
-                {calendarCells.map((cell, i) => {
-                  if (!cell) {
-                    return (
-                      <div
-                        key={`cal-pad-${i}`}
-                        className="wellness-cal-cell-wrap"
-                      />
-                    );
-                  }
-                  const checked = isTaken(save, cell.iso);
-                  const dayLabel = formatHumanDate(
-                    makeLocalNoonDateFromISO(cell.iso),
-                  );
-                  if (!cell.inRange) {
-                    return (
-                      <div key={cell.key} className="wellness-cal-cell-wrap">
-                        <div className="wellness-cal-day out" aria-hidden>
-                          <span className="wellness-cal-day-num">
-                            {cell.label}
-                          </span>
-                        </div>
-                      </div>
-                    );
-                  }
-                  return (
-                    <div key={cell.key} className="wellness-cal-cell-wrap">
-                      <button
-                        type="button"
-                        className={`wellness-cal-day ${checked ? "done" : "missed"} ${cell.iso === today ? "today" : ""}`}
-                        onClick={() => updateDate(cell.iso, !checked)}
-                        aria-label={
-                          checked
-                            ? `Creatine taken ${dayLabel}, mark as not taken`
-                            : `Creatine not taken ${dayLabel}, mark as taken`
-                        }
-                        aria-pressed={checked}
-                      >
-                        <span className="wellness-cal-day-num">
-                          {cell.label}
-                        </span>
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
+          </div>
         </section>
       </main>
 
