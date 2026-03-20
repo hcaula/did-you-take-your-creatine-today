@@ -827,10 +827,6 @@
 
 /* Mobile adjustments */
 @media (max-width: 480px) {
-  .wellness-streaks {
-    grid-template-columns: 1fr;
-  }
-
   .wellness-streak {
     padding: 16px;
   }
