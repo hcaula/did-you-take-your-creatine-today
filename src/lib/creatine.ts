@@ -62,6 +62,14 @@ export function formatHumanDate(d: Date) {
   }).format(d)
 }
 
+/** Month and day only (e.g. for chart axes where year is implied). */
+export function formatHumanMonthDay(d: Date) {
+  return new Intl.DateTimeFormat(undefined, {
+    month: 'short',
+    day: 'numeric',
+  }).format(d)
+}
+
 export function formatHumanTime(d: Date) {
   return new Intl.DateTimeFormat(undefined, {
     hour: 'numeric',

@@ -1,5 +1,6 @@
 import "./App.css";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { SaturationChart } from "./components/SaturationChart";
 import {
   addDaysLocalNoon,
   calendarMonthBounds,
@@ -667,6 +668,8 @@ function App() {
             </div>
           </div>
         </section>
+
+        <SaturationChart save={save} startDate={startDate} today={today} />
 
         <section className="wellness-card wellness-analytics" aria-label="Stats">
           <ul className="wellness-analytics-list">

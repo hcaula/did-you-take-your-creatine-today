@@ -561,7 +561,186 @@
   box-shadow: 0 0 0 3px rgba(124, 152, 133, 0.45);
 }
 
+/* Saturation chart */
+.wellness-saturation {
+  padding: 20px;
+}
+
+/* Zone 1 — nav-style header */
+.wellness-saturation-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.wellness-saturation-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--well-fg);
+  flex: 1;
+  min-width: 0;
+}
+
+.wellness-sat-select {
+  flex-shrink: 0;
+  padding: 7px 30px 7px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  background-color: rgba(255, 255, 255, 0.7);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%239a9590' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--well-fg);
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+
+.wellness-sat-select:hover {
+  border-color: rgba(124, 152, 133, 0.45);
+}
+
+.wellness-sat-select:focus {
+  outline: none;
+  border-color: var(--well-sage);
+  box-shadow: 0 0 0 3px rgba(124, 152, 133, 0.15);
+}
+
+/* Zone 2 — chart */
+.wellness-saturation-chart-wrap {
+  width: 100%;
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.wellness-saturation-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  overflow: visible;
+}
+
+.wellness-sat-grid {
+  stroke: rgba(45, 42, 38, 0.08);
+  stroke-width: 1;
+}
+
+.wellness-sat-axis-y {
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  fill: var(--well-muted);
+}
+
+.wellness-sat-axis-x {
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  fill: var(--well-muted);
+}
+
+.wellness-sat-area {
+  pointer-events: none;
+}
+
+.wellness-sat-line {
+  stroke: var(--well-sage-dark);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
+  filter: drop-shadow(0 1px 2px rgba(124, 152, 133, 0.25));
+}
+
+.wellness-sat-dot {
+  fill: #fff;
+  stroke: var(--well-sage-dark);
+  stroke-width: 2;
+}
+
+.wellness-saturation-empty {
+  margin: 8px 0 4px;
+  font-size: 0.9rem;
+  color: var(--well-muted);
+}
+
+/* Zone 3 — summary row */
+.wellness-saturation-summary {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.wellness-saturation-summary-left {
+  flex-shrink: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.wellness-saturation-summary-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--well-muted);
+}
+
+.wellness-saturation-summary-value {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: var(--well-sage-dark);
+  line-height: 1;
+}
+
+.wellness-saturation-summary-bar {
+  flex: 1;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(124, 152, 133, 0.18);
+  overflow: hidden;
+}
+
+.wellness-saturation-summary-bar-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--well-sage), var(--well-sage-dark));
+  min-width: 0;
+  max-width: 100%;
+  transition: width 0.35s ease-out;
+}
+
+.wellness-saturation-summary-status {
+  flex-shrink: 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--well-muted);
+  white-space: nowrap;
+}
+
+.wellness-sat-projection-caption {
+  margin: 10px 0 0;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--well-muted);
+  text-align: center;
+  text-align: left;
+}
+
 /* Analytics */
+
 .wellness-analytics {
   padding: 22px 24px 24px;
 }
@@ -624,11 +803,7 @@
 }
 
 .wellness-analytics-bar-fill--muted {
-  background: linear-gradient(
-    90deg,
-    var(--well-sage-light),
-    var(--well-sage)
-  );
+  background: linear-gradient(90deg, var(--well-sage-light), var(--well-sage));
 }
 
 .wellness-analytics-bar-fill--lavender {
@@ -756,5 +931,37 @@
 
   .wellness-plus {
     font-size: 40px;
+  }
+
+  .wellness-saturation-title {
+    font-size: 1rem;
+  }
+
+  .wellness-sat-select {
+    font-size: 0.88rem;
+    padding: 8px 32px 8px 12px;
+  }
+
+  .wellness-sat-axis-y,
+  .wellness-sat-axis-x {
+    font-size: 12px;
+  }
+
+  .wellness-saturation-summary {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .wellness-saturation-summary-value {
+    font-size: 1.2rem;
+  }
+
+  .wellness-saturation-summary-label,
+  .wellness-saturation-summary-status {
+    font-size: 0.76rem;
+  }
+
+  .wellness-sat-projection-caption {
+    font-size: 0.82rem;
   }
 }
