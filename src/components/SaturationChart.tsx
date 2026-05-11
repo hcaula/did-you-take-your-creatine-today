@@ -7,6 +7,7 @@ import {
   addDaysLocalNoon,
   compareISODate,
   formatHumanMonthDay,
+  isTaken,
   makeLocalNoonDateFromISO,
   toISODateKeyLocal,
   type ISODate,
@@ -56,14 +57,25 @@ export function SaturationChart({ save, startDate, today }: Props) {
   const gradId = useId();
   const [timeframe, setTimeframe] = useState<SaturationTimeframe>("30d");
 
+  // Don't include today in the series unless the user has already taken their
+  // dose. This prevents the saturation level from dipping in the morning just
+  // because the day hasn't been logged yet.
+  const seriesEnd = useMemo<ISODate>(() => {
+    if (isTaken(save, today)) return today;
+    const yesterday = toISODateKeyLocal(
+      addDaysLocalNoon(makeLocalNoonDateFromISO(today), -1),
+    );
+    return compareISODate(yesterday, startDate) >= 0 ? yesterday : today;
+  }, [save, today, startDate]);
+
   const chartFrom = useMemo(
     () => chartStartForTimeframe(timeframe, today, startDate),
     [timeframe, today, startDate],
   );
 
   const fullSeries = useMemo(
-    () => computeSaturationSeries(save, startDate, today),
-    [save, startDate, today],
+    () => computeSaturationSeries(save, startDate, seriesEnd),
+    [save, startDate, seriesEnd],
   );
 
   const series = useMemo(
@@ -182,7 +194,7 @@ export function SaturationChart({ save, startDate, today }: Props) {
             className="wellness-saturation-svg"
             viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}
             role="img"
-            aria-label={`Creatine saturation from ${chartFrom} to ${today}. Currently ${latest?.percent ?? 0}%.`}
+            aria-label={`Creatine saturation from ${chartFrom} to ${seriesEnd}. Currently ${latest?.percent ?? 0}%.`}
           >
             <defs>
               <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
